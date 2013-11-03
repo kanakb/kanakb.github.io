@@ -15,6 +15,7 @@ author :
   email : kanak@kanak.me
   github : kanakb
   twitter : kinselofant
+  linkedin : kanakbiscuitwala
 
 # The production_url is only used when full-domain names are needed
 # such as sitemap.txt
@@ -27,7 +28,6 @@ author :
 production_url : http://kanakb.github.io
 
 paginate : 10
-paginate_path : "blog/page:num"
 
 # All Jekyll-Bootstrap specific configurations are namespaced into this hash
 #
