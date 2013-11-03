@@ -7,7 +7,7 @@ header: blog
 
 {% for post in paginator.posts %}
     <p><strong>{{ post.date | date: "%B %e, %Y" }}</strong></p>
-    <h3><a href="{{ post.url }}" style="text-decoration: none; border-bottom: 1px dashed #999999">{{ post.title }}</a></h3>
+    <h3><a href="{{ post.url }}" style="color: #cc0000; text-decoration: none; border-bottom: 1px dashed #999999">{{ post.title }}</a></h3>
     {{ post.content }}
 {% endfor %}
 
