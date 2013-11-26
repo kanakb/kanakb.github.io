@@ -31,6 +31,8 @@ production_url : http://kanakb.github.io
 
 paginate : 10
 
+images_directory : assets
+
 # All Jekyll-Bootstrap specific configurations are namespaced into this hash
 #
 JB :

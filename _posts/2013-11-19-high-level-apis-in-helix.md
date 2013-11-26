@@ -11,34 +11,44 @@ Up until now, [Helix](http://helix.incubator.apache.org) APIs have had (close to
 
 To further complicate things, there is a single [HelixManager](http://helix.incubator.apache.org/javadocs/0.7.0-incubating/reference/org/apache/helix/HelixManager.html) class that manages all interactions to ZooKeeper. However, it contains functions that make no sense depending on how the application is trying to interact with Helix. A controller doesn't need to call `getStateMachineEngine()`, for example.
 
-There are plenty of good reasons to have generic, low-level APIs: code reuse, support for fine-tuning, guarantees of atomicity at the single ZNode level, among others. However, it leads to code like this:
+There are plenty of good reasons to have generic, low-level APIs: code reuse, support for fine-tuning, guarantees of atomicity at the single ZNode level, among others. However, it leads to a detachment from the concepts the framework is trying to present. And because Helix stores things as JSON, there are a lot of strings everywhere, like:
 
 {% highlight java %}
-// check the tags of live participants in the system for this resource's tag
-public Set<String> getTaggedParticipants(
-    String resourceName,
-    IdealState idealState) {
-  Set<String> taggedParticipants = Sets.newHashSet();
-  String resourceTag = idealState.getInstanceGroupTag();
-  List<String> liveParticipants = accessor.getChildNames(keyBuilder.liveInstances());
-  for (String participantName : liveParticipants) {
-    InstanceConfig instanceConfig = accessor.getProperty(keyBuilder.instanceConfig(participantName));
-    Set<String> tags = instanceConfig.getTags();
-    if (tags.contains(resourceTag)) {
-      taggedParticipants.add(participantName);
-    }
-  }
-}
+Map<String, Map<String, String>> mapFields =
+    property.getRecord().getMapFields();
 {% endhighlight %}
 
-This is ugly. We had to know that the resource tag is in the `IdealState`, and that we had to get an `InstanceConfig` for every live participant name. Even worse, resource names, participant names, and tags are all plain strings. Every time we pass a `Set<String>` to a new method, it's likely to lose some of its meaning.
+At this level, each of those strings has lost its meaning.
 
-Helix 0.7.0 high-level APIs change all this. From configuration to launch to management, 0.7.0 tries to expose APIs that speak in terms of actual Helix concepts (e.g. "Participant", "Controller", "Resource", "Partition", and so on). And now those objects have an explicit hierarchy: a `Cluster` has `Participant`s, `Resource`s, and `Controller`s, and a `Resource` has `Partition`s.
+Helix 0.7.0 high-level APIs change all this. From configuration to launch to management, 0.7.0 tries to expose APIs that speak in terms of actual Helix concepts (e.g. "Participant", "Controller", "Resource", "Partition", and so on). And now those objects have an explicit hierarchy: a `Cluster` has roles (e.g. `Participant`s, `Controller`s, and `Spectator`s) and `Resource`s, and a `Resource` has `Partition`s.
 
 This post is an introduction by example to the new 0.7.0 APIs. The full code is available [here](https://git-wip-us.apache.org/repos/asf?p=incubator-helix.git;a=blob;f=helix-examples/src/main/java/org/apache/helix/examples/LogicalModelExample.java;h=c23341771fc0d0b7f909c7736cbcf5d651c49def;hb=master).
 
-### Configuring a esource
-For resourses and other constructs, Helix now makes a clear distinction between configuration properties that Helix defines, and those that the application defines. Specifically for resources, this distinction is in the form of the `RebalancerContext` and the `UserConfig`. Furthermore, all constructs have concrete ID types, in this case a `ResourceId`. No more data structures with raw strings!
+### The Hierarchy
+Below is a summary of the logical hierarchy of classes added to 0.7.0. An arrow here indicates a \"has-a\" relation. This hierarchy is replicated in the configuration classes (i.e. ClusterConfig, ResourceConfig, ParticipantConfig, etc), as well as the snapshot classes (i.e. Cluster, Resource, Participant, etc).
+
+<a href="{{ site.url }}/assets/070hierarchy.png"><img src="{{ site.url }}/assets/070hierarchy.png" alt="Helix API Hierarchy" width="100%" height="100%"/></a>
+
+For those familiar with the existing APIs, this isn't a major departure. Many of the leaf nodes are the same low-level classes, like `CurrentState` and `ExternalView`. However, each has been integrated into this hierarchy. When you read a cluster, you get its participants and resources, and so on.
+
+There is one major difference that those aware of Helix concepts may have noticed: the omission of `IdealState` in the hierarchy. Over time, this class has become a dumping ground for arbitrary resource properties. Worse, for non-data resources, many of the concepts of IdealState are difficult to relate to. Thus, Helix now has an interface called `RebalancerContext` which captures the real goal of an IdealState of configuring how to assign resources to participants while allowing users to introduce application-specific constructs. See [this tutorial](http://helix.incubator.apache.org/site-releases/0.7.0-incubating-site/tutorial_user_def_rebalancer.html) for more.
+
+Furthermore, in the past, the Helix admin API encouraged applications to simply set simple fields, list fields, and map fields on `HelixProperty` objects as a way to have accessible user-specific configurations. This was clunky and confusing. Instead, Helix now has a `UserConfig` class for all of these items, and it is available at multiple levels of the hierarchy (cluster, participant, resource, and partition; see the boxed UserConfigs in the diagram). Now there is a clear separation and protection against name collisions for fields that Helix users set and fields that Helix itself sets.
+
+Notice that some of the hierarchy has bubbles indicating that the type has a concrete ID class to identify it, all constructs have concrete ID types, in this case a `ResourceId`. No more data structures with raw strings!
+
+### Interfaces
+There are a few different types of new APIs in 0.7.0. For instance, there are cluster snapshots, configurations, IDs, and accessors. Snapshots are intended to be a high-level equivalent to `ClusterDataCache`, configurations are intended to be a high-level equivalent to `HelixProperty` objects, IDs are replacements for arbitrary strings in Helix code, and accessors support CRUD with those classes in a more hierarchical way than `HelixAdmin`. Most of these interfaces are available in the [org.apache.helix.api](http://helix.incubator.apache.org/javadocs/0.7.0-incubating/reference/org/apache/helix/api/package-summary.html) package.
+
+Helix 0.7.0 also introduced a new way of managing Helix connections. There is now a reusable `HelixConnection` class that can get all of the logical accessors for the cluster, as well as objects for each Helix role (e.g. Controllers and Participants) that can be started and stopped. The HelixConnection API is [here](http://helix.incubator.apache.org/javadocs/0.7.0-incubating/reference/org/apache/helix/HelixConnection.html); it is meant to be a cleaner version of the too-large `HelixManager`.
+
+Now, we can see these interfaces in action.
+
+### Create a State Model Definition
+This process is relatively unchanged. The tutorial for creating a new one can be found [here](http://helix.incubator.apache.org/site-releases/0.7.0-incubating-site/tutorial_state.html). Our resource uses a lock-unlock model, which is basically where one replica per partition is in _LOCKED_ state and all others are in _RELEASED_ state (i.e. each partition is an exclusive lock).
+
+### Configure a Resource
+For resourses, Helix now makes a clear distinction between configuration properties that Helix defines, and those that the application defines. This distinction is in the form of the `RebalancerContext` and the `UserConfig`.
 
 {% highlight java %}
 // identify the resource with a concrete type
@@ -65,7 +75,7 @@ ResourceConfig resource =
     .build();
 {% endhighlight %}
 
-### Configuring a Participant
+### Configure a Participant
 It's the same idea for configuring a participant. Add Helix-specific properties, attach a UserConfig, and it's ready to go.
 
 {% highlight java %}
@@ -84,7 +94,7 @@ ParticipantConfig participant =
     .build();
 {% endhighlight %}
 
-### Configuring and Adding the Cluster
+### Create and Configure the Cluster
 Now that we have a resource and a participant configured, let's add them to a cluster.
 
 {% highlight java %}
@@ -158,8 +168,8 @@ resourceAccessor.setRebalancerContext(resourceId, newContext);
 
 The accessor classes allow CRUD operations on virtually every granularity. Check out the [javadocs](http://helix.incubator.apache.org/javadocs/0.7.0-incubating/reference/org/apache/helix/api/accessor/package-summary.html) to see what you can do with them.
 
-# Starting a Controller and Participant
-0.7.0 didn't just add configuration APIs. It also supports actually starting Helix for each role. Here's how to start a controller:
+# Start a Controller and Participant
+Helix 0.7.0 didn't just add configuration APIs. It also supports actually starting Helix for each role. Here's how to start a controller:
 
 {% highlight java %}
 ControllerId controllerId = ControllerId.from("exampleController");
@@ -180,27 +190,5 @@ helixParticipant.startAsync();
 
 In both cases, we're speaking in concrete classes for each role: `HelixController` and `HelixParticipant`. Before, the role was an enum flag that was passed into the monolithic `HelixManager` class. Now, each role-specific class only contains methods that make sense for that role.
 
-### Back to the Example
-Let's revisit the example from the beginning of the post, now with the high-level APIs.
-
-{% highlight java %}
-// check the tags of live participants in the system for this resource's tag
-public Set<ParticipantId> getTaggedParticipants(
-    ResourceId resourceId,
-    RebalancerContext rebalancerContext) {
-  Cluster cluster = accessor.readCluster();
-  Set<ParticipantId> taggedParticipants = Sets.newHashSet();
-  String resourceTag = rebalancerContext.getParticipantGroupTag();
-  Collection<Participant> liveParticipants = cluster.getLiveParticipantMap().values();
-  for (Participant participant : liveParticipants) {
-    if (participant.hasTag(resourceTag)) {
-      taggedParticipants.add(participant.getId());
-    }
-  }
-}
-{% endhighlight %}
-
-The code size is similar, but each line makes more sense. Everything falls into the cluster hierarchy, and there's no second lookup to get the participant configuration; the live participant lookup returned concrete objects.
-
 ### We're not done!
-0.7.0 represents an initial take on refactoring Helix's API. The most important thing with this release is to get it in the hands of system builders to see where it works best and where it falls short. If you try the 0.7.0 API and have suggestions about how it could work better, we'd love to hear them: `user@helix.incubator.apache.org`
+Helix 0.7.0 represents an initial take on refactoring Helix's API. The most important thing with this release is to get it in the hands of system builders to see where it works best and where it falls short. If you try the 0.7.0 API and have suggestions about how it could work better, we'd love to hear them: `user@helix.incubator.apache.org`
