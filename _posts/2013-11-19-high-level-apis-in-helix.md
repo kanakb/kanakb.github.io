@@ -192,3 +192,6 @@ In both cases, we're speaking in concrete classes for each role: `HelixControlle
 
 ### We're not done!
 Helix 0.7.0 represents an initial take on refactoring Helix's API. The most important thing with this release is to get it in the hands of system builders to see where it works best and where it falls short. If you try the 0.7.0 API and have suggestions about how it could work better, we'd love to hear them: `user@helix.incubator.apache.org`
+
+### Update
+The master branch of Helix renamed `RebalancerContext` to `RebalancerConfig` to more accurately represent it as something that is typically set beforehand. In addition, there is now something called a `ControllerContext` that the rebalancer can set and will be persisted across controller pipeline runs.
