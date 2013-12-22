@@ -60,7 +60,7 @@ p.connect()
 
 #### Spectator Code
 
-When I was thinking of an example to write with this new library, I realized one thing: it's pretty important to know who's in the cluster and serving partitions. Thus, I wrote a basic spectator that registers for changes to the Helix external view, and provides some functions analogous to [RoutingTableProvider](http://helix.incubator.apache.org/javadocs/0.6.2-incubating/reference/org/apache/helix/spectator/RoutingTableProvider.html) in the Java library.
+When I was thinking of an example to write with this new library, I realized one thing: it's pretty important to know who's in the cluster and serving partitions. So I wrote a basic spectator that registers for changes to the Helix external view, and provides some functions analogous to [RoutingTableProvider](http://helix.incubator.apache.org/javadocs/0.6.2-incubating/reference/org/apache/helix/spectator/RoutingTableProvider.html) in the Java library.
 
 Here's a basic spectator:
 
