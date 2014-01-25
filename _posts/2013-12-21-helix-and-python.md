@@ -7,7 +7,7 @@ tags: ["code","helix"]
 ---
 {% include JB/setup %}
 
-[Helix](http://helix.incubator.apache.org) keeps getting [picked up](https://twitter.com/rbranson/status/411305214667259906) as a building block for distributed systems. However, most of these systems are built on languages that are JVM-based. There are currently two ways that Helix can support systems on other platforms. In this post, I'll focus on [pyhelix](https://github.com/kanakb/pyhelix), a Python-based Helix participant and spectator. Part 2 will cover the helix agent module in the main distribution.
+[Helix](http://helix.apache.org) keeps getting [picked up](https://twitter.com/rbranson/status/411305214667259906) as a building block for distributed systems. However, most of these systems are built on languages that are JVM-based. There are currently two ways that Helix can support systems on other platforms. In this post, I'll focus on [pyhelix](https://github.com/kanakb/pyhelix), a Python-based Helix participant and spectator. Part 2 will cover the helix agent module in the main distribution.
 
 ### pyhelix
 
@@ -60,7 +60,7 @@ p.connect()
 
 #### Spectator Code
 
-When I was thinking of an example to write with this new library, I realized one thing: it's pretty important to know who's in the cluster and serving partitions. So I wrote a basic spectator that registers for changes to the Helix external view, and provides some functions analogous to [RoutingTableProvider](http://helix.incubator.apache.org/javadocs/0.6.2-incubating/reference/org/apache/helix/spectator/RoutingTableProvider.html) in the Java library.
+When I was thinking of an example to write with this new library, I realized one thing: it's pretty important to know who's in the cluster and serving partitions. So I wrote a basic spectator that registers for changes to the Helix external view, and provides some functions analogous to [RoutingTableProvider](http://helix.apache.org/javadocs/0.6.2-incubating/reference/org/apache/helix/spectator/RoutingTableProvider.html) in the Java library.
 
 Here's a basic spectator:
 
