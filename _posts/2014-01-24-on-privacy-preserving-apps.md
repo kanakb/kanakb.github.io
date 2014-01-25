@@ -3,7 +3,7 @@ layout: post
 title: "On Privacy-Preserving Apps"
 description: ""
 category: "posts"
-tags: ["code","mobile"]
+tags: ["dispatch","security", "mobile"]
 ---
 {% include JB/setup %}
 
