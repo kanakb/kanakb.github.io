@@ -68,7 +68,7 @@ Even if you build the perfect messaging app with end-to-end encryption, there ar
 * You need something like [Tor](http://torproject.org) to mask your IP
 * You need to encrypt your phone's storage in case it gets confiscated
 * Having a private chat app on your phone could already be incriminating enough
-* You might not even be legally permitted to use encrypted messaging
+* You might not even be legally permitted to use encrypted messaging where you live
 
 #### I'm not a designer
 
